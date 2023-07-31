@@ -582,6 +582,7 @@ int process_options(int argc, char *argv[])
     options.window_varied = 0;
     options.print_rate = 1;
     options.validate = 0;
+    options.percentiles = 0;
     options.papi_enabled = 0;
     options.buf_num = SINGLE;
     options.omb_enable_ddt = 0;
@@ -876,6 +877,9 @@ int process_options(int argc, char *argv[])
                     bad_usage.optarg = optarg;
                     return PO_BAD_USAGE;
                 }
+                break;
+            case 'L':
+                options.percentiles = 1;
                 break;
             case 'P':
 #ifdef _ENABLE_PAPI_

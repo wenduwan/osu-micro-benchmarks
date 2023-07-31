@@ -930,6 +930,24 @@ void print_only_header(int rank)
     fflush(stdout);
 }
 
+void print_percentiles_header(int rank)
+{
+    if (rank)
+    {
+        return;
+    }
+
+    fprintf(stdout, "%-*s", 10, "# Size");
+    for (size_t i = 0; i < npercentiles; ++i)
+    {
+        fprintf(stdout, "%*.*f", PERCENTILE_FIELD_WIDTH, FLOAT_PRECISION, percentiles[i]);
+    }
+    fprintf(stdout, "%*s", PERCENTILE_FIELD_WIDTH, "Avg");
+
+    fprintf(stdout, "\n");
+    fflush(stdout);
+}
+
 omb_mpi_init_data omb_mpi_init(int *argc, char ***argv)
 {
     omb_mpi_init_data init_struct;
@@ -1188,6 +1206,23 @@ void print_stats_validate(int rank, int size, double avg_time, double min_time,
     fflush(stdout);
 }
 
+void print_lat_percentiles(int rank, int size, double *lat_percentiles, double avg)
+{
+    if (rank)
+    {
+        return;
+    }
+
+    fprintf(stdout, "%-*d", 10, size);
+
+    for (int i = 0; i < npercentiles; ++i)
+    {
+        fprintf(stdout, "%*.*f", PERCENTILE_FIELD_WIDTH, FLOAT_PRECISION, lat_percentiles[i]);
+    }
+    fprintf(stdout, "%*.*f", PERCENTILE_FIELD_WIDTH, FLOAT_PRECISION, avg);
+    fprintf(stdout, "\n");
+}
+
 int omb_get_root_rank(int itr, size_t comm_size)
 {
     if (OMB_ROOT_ROTATE_VAL != options.omb_root_rank) {
@@ -1197,7 +1232,7 @@ int omb_get_root_rank(int itr, size_t comm_size)
         }
         return options.omb_root_rank;
     }
-    return itr % comm_size;
+    return (itr % comm_size) % 2 == 0 ? (itr % (comm_size / 2)) : (itr % (comm_size / 2) + comm_size / 2);
 }
 
 void omb_populate_mpi_type_list(MPI_Datatype *mpi_type_list)

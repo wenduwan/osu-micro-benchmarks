@@ -45,6 +45,7 @@
         {"num-pairs", required_argument, 0, 'p'},                              \
         {"vary-window", required_argument, 0, 'V'},                            \
         {"validation", no_argument, 0, 'c'},                                   \
+        {"percentiles", no_argument, 0, 'L'},                                  \
         {"buffer-num", required_argument, 0, 'b'},                             \
         {"validation-warmup", required_argument, 0, 'u'},                      \
         {"graph", required_argument, 0, 'G'},                                  \
@@ -73,8 +74,8 @@
 #define OMBOP__ACCEL__COLLECTIVE__ALL_GATHER  OMBOP__ACCEL__COLLECTIVE__ALLTOALL
 #define OMBOP__COLLECTIVE__SCATTER            OMBOP__COLLECTIVE__ALLTOALL "k:"
 #define OMBOP__ACCEL__COLLECTIVE__SCATTER     OMBOP__ACCEL__COLLECTIVE__ALLTOALL "k:"
-#define OMBOP__COLLECTIVE__BCAST              "+:hvfm:i:x:M:a:cu:G:D:P:T:I"
-#define OMBOP__ACCEL__COLLECTIVE__BCAST       "+:d:hvfm:i:x:M:a:cu:G:D:T:I"
+#define OMBOP__COLLECTIVE__BCAST              "+:hvfm:i:x:M:a:cu:LG:D:P:T:I"
+#define OMBOP__ACCEL__COLLECTIVE__BCAST       "+:d:hvfm:i:x:M:a:cu:LG:D:T:I"
 #define OMBOP__COLLECTIVE__NHBR_GATHER        "+:hvfm:i:x:M:a:cu:N:G:D:P:T:I"
 #define OMBOP__ACCEL__COLLECTIVE__NHBR_GATHER "+:hvfm:i:x:M:a:cu:N:G:D:T:I"
 #define OMBOP__COLLECTIVE__NHBR_ALLTOALL      OMBOP__COLLECTIVE__NHBR_GATHER
@@ -84,8 +85,8 @@
 #define OMBOP__ACCEL__COLLECTIVE__BARRIER        "+:d:hvfm:i:x:M:a:u:G:I"
 #define OMBOP__COLLECTIVE__LAT                   "+:hvfm:i:x:M:a:"
 #define OMBOP__ACCEL__COLLECTIVE__LAT            "+:d:hvfm:i:x:M:a:"
-#define OMBOP__COLLECTIVE__ALL_REDUCE            "+:hvfm:i:x:M:a:cu:G:P:T:Il"
-#define OMBOP__ACCEL__COLLECTIVE__ALL_REDUCE     "+:d:hvfm:i:x:M:a:cu:G:T:Il"
+#define OMBOP__COLLECTIVE__ALL_REDUCE            "+:hvfm:i:x:M:a:cu:LG:P:T:Il"
+#define OMBOP__ACCEL__COLLECTIVE__ALL_REDUCE     "+:d:hvfm:i:x:M:a:cu:LG:T:Il"
 #define OMBOP__COLLECTIVE__REDUCE                OMBOP__COLLECTIVE__ALL_REDUCE "k:"
 #define OMBOP__ACCEL__COLLECTIVE__REDUCE         OMBOP__ACCEL__COLLECTIVE__ALL_REDUCE "k:"
 #define OMBOP__COLLECTIVE__REDUCE_SCATTER        OMBOP__COLLECTIVE__ALL_REDUCE
@@ -100,12 +101,12 @@
 #define OMBOP__ACCEL__COLLECTIVE__NBC_ALL_GATHER OMBOP__ACCEL__COLLECTIVE__NBC_ALLTOALL
 #define OMBOP__COLLECTIVE__NBC_SCATTER           OMBOP__COLLECTIVE__NBC_ALLTOALL "k:"
 #define OMBOP__ACCEL__COLLECTIVE__NBC_SCATTER    OMBOP__ACCEL__COLLECTIVE__NBC_ALLTOALL "k:"
-#define OMBOP__COLLECTIVE__NBC_BCAST          "+:hvfm:i:x:M:t:a:cu:G:D:P:T:I"
-#define OMBOP__ACCEL__COLLECTIVE__NBC_BCAST   "+:d:hvfm:i:x:M:t:a:cu:G:D:T:I"
+#define OMBOP__COLLECTIVE__NBC_BCAST          "+:hvfm:i:x:M:t:a:cu:G:LD:P:T:I"
+#define OMBOP__ACCEL__COLLECTIVE__NBC_BCAST   "+:d:hvfm:i:x:M:t:a:cu:G:LD:T:I"
 #define OMBOP__COLLECTIVE__NBC_ALL_REDUCE         "+:hvfm:i:x:M:t:a:cu:G:P:T:Il"
 #define OMBOP__ACCEL__COLLECTIVE__NBC_ALL_REDUCE  "+:d:hvfm:i:x:M:t:a:cu:G:T:Il"
-#define OMBOP__COLLECTIVE__NBC_REDUCE             OMBOP__COLLECTIVE__NBC_ALL_REDUCE "k:"
-#define OMBOP__ACCEL__COLLECTIVE__NBC_REDUCE      OMBOP__ACCEL__COLLECTIVE__NBC_ALL_REDUCE "k:"
+#define OMBOP__COLLECTIVE__NBC_REDUCE             OMBOP__COLLECTIVE__NBC_ALL_REDUCE "Lk:"
+#define OMBOP__ACCEL__COLLECTIVE__NBC_REDUCE      OMBOP__ACCEL__COLLECTIVE__NBC_ALL_REDUCE "Lk:"
 #define OMBOP__COLLECTIVE__NBC_REDUCE_SCATTER     OMBOP__COLLECTIVE__NBC_ALL_REDUCE
 #define OMBOP__ACCEL__COLLECTIVE__NBC_REDUCE_SCATTER                           \
     OMBOP__ACCEL__COLLECTIVE__NBC_ALL_REDUCE

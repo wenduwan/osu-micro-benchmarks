@@ -96,6 +96,10 @@
 #define FIELD_WIDTH 20
 #endif
 
+#ifndef PERCENTILE_FIELD_WIDTH
+#define PERCENTILE_FIELD_WIDTH 10
+#endif
+
 #ifndef FLOAT_PRECISION
 #define FLOAT_PRECISION 2
 #endif
@@ -174,7 +178,7 @@ double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
 
 enum mpi_req { MAX_REQ_NUM = 1000 };
 
-#define OMB_LONG_OPTIONS_ARRAY_SIZE     28
+#define OMB_LONG_OPTIONS_ARRAY_SIZE     29
 #define BW_LOOP_SMALL                   100
 #define BW_SKIP_SMALL                   10
 #define BW_LOOP_LARGE                   20
@@ -364,6 +368,7 @@ struct options_t {
     int print_rate;
     int pairs;
     int validate;
+    int percentiles;
     enum buffer_num buf_num;
     int graph;
     int graph_output_term;

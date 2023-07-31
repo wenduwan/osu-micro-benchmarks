@@ -76,11 +76,13 @@ void print_help_message(int rank);
 void print_version_message(int rank);
 void print_preamble(int rank);
 void print_only_header(int rank);
+void print_percentiles_header(int rank);
 void print_preamble_nbc(int rank);
 void print_only_header_nbc(int rank);
 void print_stats(int rank, int size, double avg, double min, double max);
 void print_stats_validate(int rank, int size, double avg, double min,
                           double max, int errors);
+void print_lat_percentiles(int rank, int size, double *lat_percentiles, double avg);
 void print_stats_nbc(int rank, int size, double ovrl, double cpu,
                      double avg_comm, double min_comm, double max_comm,
                      double wait, double init, double test, int errors);
@@ -233,3 +235,26 @@ omb_mpi_init_data omb_mpi_init(int *argc, char ***argv);
 
 int omb_get_root_rank(int itr, size_t comm_size);
 void omb_scatter_offset_copy(void *buf, int root_rank, size_t size);
+
+static const double percentiles[] = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+static const size_t npercentiles = sizeof(percentiles) / sizeof(double);
+
+#define CALC_PERCENTILE(arr, count, percentile) \
+    (arr[MAX(0, ((int)(count * percentile) - 1))])
+
+#define CMP_ASC(type, a, b)  \
+    do                       \
+    {                        \
+        type A = *(type *)a; \
+        type B = *(type *)b; \
+        if (A < B)           \
+            return -1;       \
+        if (A > B)           \
+            return 1;        \
+        return 0;            \
+    } while (0)
+
+static inline int cmpfunc_asc_double(const void *a, const void *b)
+{
+    CMP_ASC(double, a, b);
+}

@@ -14,7 +14,9 @@ int main(int argc, char *argv[])
 {
     int i, j, numprocs, rank, size;
     double latency = 0.0, t_start = 0.0, t_stop = 0.0;
-    double timer = 0.0;
+    double timer = 0.0, iter_time = 0.0;
+    double iter_time_percentiles[npercentiles];
+    double *rank_time_list = NULL, *iter_times = NULL;
     double avg_time = 0.0, max_time = 0.0, min_time = 0.0;
     void *sendbuf, *recvbuf;
     void *sendbuf_warmup = NULL, *recvbuf_warmup = NULL;
@@ -84,6 +86,24 @@ int main(int argc, char *argv[])
         omb_mpi_finalize(omb_init_h);
         exit(EXIT_FAILURE);
     }
+
+    if (0 == rank)
+    {
+        rank_time_list = calloc(numprocs, sizeof(double));
+        if (!rank_time_list)
+        {
+            fprintf(stderr, "No memory\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    iter_times = calloc(options.iterations, sizeof(double));
+    if (!iter_times)
+    {
+        fprintf(stderr, "No memory\n");
+        exit(EXIT_FAILURE);
+    }
+
     check_mem_limit(numprocs);
     bufsize = options.max_message_size;
     if (allocate_memory_coll((void **)&recvbuf, bufsize, options.accel)) {
@@ -120,7 +140,14 @@ int main(int argc, char *argv[])
         OMB_MPI_RUN_AT_RANK_ZERO(
             fprintf(stdout, "# Datatype: %s.\n", mpi_type_name_str));
         fflush(stdout);
-        print_only_header(rank);
+        if (options.percentiles)
+        {
+            print_percentiles_header(rank);
+        }
+        else
+        {
+            print_only_header(rank);
+        }
         for (size = options.min_message_size; size <= options.max_message_size;
              size *= 2) {
             num_elements = size / mpi_type_size;
@@ -137,12 +164,14 @@ int main(int argc, char *argv[])
             MPI_CHECK(MPI_Barrier(omb_comm));
 
             timer = 0.0;
-
+            memset(iter_time_percentiles, 0, sizeof(iter_time_percentiles));
             for (i = 0; i < options.iterations + options.skip; i++) {
+                /* Force root rotation */
+                options.omb_root_rank = OMB_ROOT_ROTATE_VAL;
+                root_rank = omb_get_root_rank(i, numprocs);
                 if (i == options.skip) {
                     omb_papi_start(&papi_eventset);
                 }
-                root_rank = omb_get_root_rank(i, numprocs);
                 if (options.validate) {
                     set_buffer_validation(sendbuf, recvbuf, size, options.accel,
                                           i, omb_curr_datatype,
@@ -184,32 +213,66 @@ int main(int argc, char *argv[])
                 }
 
                 if (i >= options.skip) {
-                    timer += t_stop - t_start;
+                    iter_time = t_stop - t_start;
+                    iter_times[i - options.skip] = iter_time;
+                    timer += iter_time;
                     if (options.graph && 0 == rank) {
                         omb_graph_data->data[i - options.skip] =
-                            (t_stop - t_start) * 1e6;
+                            iter_time * 1e6;
                     }
                 }
             }
             omb_papi_stop_and_print(&papi_eventset, size);
             latency = (double)(timer * 1e6) / options.iterations;
 
-            MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0,
-                                 omb_comm));
-            MPI_CHECK(MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0,
-                                 omb_comm));
-            MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
-                                 omb_comm));
+            if (options.percentiles)
+            {
+                for (int i = 0; i < options.iterations; ++i)
+                {
+                    if (0 == rank)
+                    {
+                        MPI_CHECK(MPI_Gather(&iter_times[i], 1, MPI_DOUBLE, rank_time_list, 1, MPI_DOUBLE, 0, omb_comm));
+                        qsort(rank_time_list, numprocs, sizeof(double), cmpfunc_asc_double);
+                        for (size_t j = 0; j < sizeof(percentiles) / sizeof(double); ++j)
+                        {
+                            iter_time_percentiles[j] += CALC_PERCENTILE(rank_time_list, numprocs, percentiles[j]);
+                        }
+                    }
+                    else
+                    {
+                        MPI_CHECK(MPI_Gather(&iter_times[i], 1, MPI_DOUBLE, NULL, 1, MPI_DOUBLE, 0, omb_comm));
+                    }
+                    MPI_Barrier(omb_comm);
+                }
+
+                for (size_t i = 0; 0 == rank && i < sizeof(percentiles) / sizeof(double); ++i)
+                {
+                    iter_time_percentiles[i] = (double)(iter_time_percentiles[i] * 1e6 / options.iterations);
+                }
+            }
+            else
+            {
+                MPI_CHECK(MPI_Reduce(&latency, &min_time, 1, MPI_DOUBLE, MPI_MIN, 0, omb_comm));
+                MPI_CHECK(MPI_Reduce(&latency, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, omb_comm));
+            }
+
+            MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0, omb_comm));
             avg_time = avg_time / numprocs;
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT,
                                         MPI_SUM, omb_comm));
             }
 
-            if (options.validate) {
-                print_stats_validate(rank, size, avg_time, min_time, max_time,
-                                     errors);
-            } else {
+            if (options.validate)
+            {
+                print_stats_validate(rank, size, avg_time, min_time, max_time, errors);
+            }
+            else if (options.percentiles)
+            {
+                print_lat_percentiles(rank, size, iter_time_percentiles, avg_time);
+            }
+            else
+            {
                 print_stats(rank, size, avg_time, min_time, max_time);
             }
             if (options.graph && 0 == rank) {
@@ -228,6 +291,14 @@ int main(int argc, char *argv[])
     omb_graph_free_data_buffers(&omb_graph_options);
     omb_papi_free(&papi_eventset);
 
+    if (rank_time_list)
+    {
+        free(rank_time_list);
+    }
+    if (iter_times)
+    {
+        free(iter_times);
+    }
     free_buffer(sendbuf_warmup, options.accel);
     free_buffer(recvbuf_warmup, options.accel);
     free_buffer(recvbuf, options.accel);
