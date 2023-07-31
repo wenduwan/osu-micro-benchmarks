@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     double latency = 0.0, t_start = 0.0, t_stop = 0.0;
     double tcomp = 0.0, tcomp_total = 0.0, latency_in_secs = 0.0;
     double test_time = 0.0, test_total = 0.0;
-    double timer = 0.0;
+    double timer = 0.0, iter_time = 0.0, max_iter = 0.0;
     int errors = 0, local_errors = 0;
     double wait_time = 0.0, init_time = 0.0;
     double init_total = 0.0, wait_total = 0.0;
@@ -270,7 +270,16 @@ int main(int argc, char *argv[])
                 }
 
                 if (i >= options.skip) {
-                    timer += t_stop - t_start;
+                    iter_time = t_stop - t_start;
+                    MPI_CHECK(MPI_Reduce(&iter_time, &max_iter, 1, MPI_DOUBLE, MPI_MAX, 0, omb_comm));
+                    if (0 == rank)
+                    {
+                        timer += max_iter;
+                    }
+                    else
+                    {
+                        timer += iter_time;
+                    }
                     tcomp_total += tcomp;
                     wait_total += wait_time;
                     test_total += test_time;

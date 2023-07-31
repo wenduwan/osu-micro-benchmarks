@@ -1078,7 +1078,7 @@ double calculate_and_print_stats(int rank, int size, int numprocs, double timer,
     /* Time for the NBC call */
     init_total = init_total / numprocs;
 
-    print_stats_nbc(rank, size, overall_time, tcomp_total, avg_comm_time,
+    print_stats_nbc(rank, size, (timer * 1e6) / options.iterations, tcomp_total, avg_comm_time,
                     min_comm_time, max_comm_time, wait_total, init_total,
                     test_total, errors);
     return overall_time;

@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
     int i, j, numprocs, rank, size;
     double latency = 0.0, t_start = 0.0, t_stop = 0.0;
-    double timer = 0.0;
+    double timer = 0.0, iter_time = 0.0, max_iter = 0.0;
     double avg_time = 0.0, max_time = 0.0, min_time = 0.0;
     char *sendbuf, *recvbuf;
     void *sendbuf_warmup = NULL, *recvbuf_warmup = NULL;
@@ -165,9 +165,20 @@ int main(int argc, char *argv[])
                         validate_data(recvbuf, size, numprocs, options.accel, i,
                                       omb_curr_datatype);
                 }
-                if (i >= options.skip) {
-                    timer += t_stop - t_start;
-                    if (options.graph && 0 == rank) {
+                if (i >= options.skip)
+                {
+                    iter_time = t_stop - t_start;
+                    MPI_CHECK(MPI_Reduce(&iter_time, &max_iter, 1, MPI_DOUBLE, MPI_MAX, 0, omb_comm));
+                    if (0 == rank)
+                    {
+                        timer += max_iter;
+                    }
+                    else
+                    {
+                        timer += iter_time;
+                    }
+                    if (options.graph && 0 == rank)
+                    {
                         omb_graph_data->data[i - options.skip] =
                             (t_stop - t_start) * 1e6;
                     }
@@ -183,6 +194,12 @@ int main(int argc, char *argv[])
             MPI_CHECK(MPI_Reduce(&latency, &avg_time, 1, MPI_DOUBLE, MPI_SUM, 0,
                                  omb_comm));
             avg_time = avg_time / numprocs;
+
+            if (0 == rank)
+            {
+                avg_time == latency;
+            }
+
             if (options.validate) {
                 MPI_CHECK(MPI_Allreduce(&local_errors, &errors, 1, MPI_INT,
                                         MPI_SUM, omb_comm));
