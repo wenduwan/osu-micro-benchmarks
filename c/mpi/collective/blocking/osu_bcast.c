@@ -111,6 +111,11 @@ int main(int argc, char *argv[])
     omb_buffer_sizes.sendbuf_size = options.max_message_size;
     omb_buffer_sizes.recvbuf_size = options.max_message_size;
 
+    int alltoall[numprocs];
+    memset(alltoall, rank, sizeof(int) * numprocs);
+    /* Everyone should know each other - this helps reduce initialization delays */
+    MPI_CHECK(MPI_Alltoall(MPI_IN_PLACE, 1, MPI_INT, alltoall, 1, MPI_INT, omb_comm));
+
     print_preamble(rank);
     omb_papi_init(&papi_eventset);
     for (mpi_type_itr = 0; mpi_type_itr < options.omb_dtype_itr;
@@ -170,6 +175,7 @@ int main(int argc, char *argv[])
                     MPI_CHECK(MPI_Barrier(omb_comm));
                 }
 
+                MPI_CHECK(MPI_Barrier(omb_comm));
                 t_start = MPI_Wtime();
                 MPI_CHECK(MPI_Bcast(buffer, num_elements, omb_curr_datatype, root, omb_comm));
                 t_stop = MPI_Wtime();
